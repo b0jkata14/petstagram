@@ -18,7 +18,7 @@ class Migration(migrations.Migration):
             name='Photo',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('photo', models.ImageField(upload_to='media', validators=[petstagram.photos.validators.FileSizeValidator(5)])),
+                ('photo', models.ImageField(upload_to='images', validators=[petstagram.photos.validators.FileSizeValidator(5)])),
                 ('description', models.TextField(blank=True, max_length=300, null=True, validators=[django.core.validators.MinLengthValidator(10)])),
                 ('location', models.CharField(blank=True, max_length=30, null=True)),
                 ('date_of_publication', models.DateField(auto_now_add=True)),

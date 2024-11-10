@@ -1,6 +1,10 @@
-from django.shortcuts import render, redirect, resolve_url
+from django.utils import timezone
+import pytz
+
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.shortcuts import redirect, resolve_url
 from django.views import View
-from django.views.generic import ListView, FormView, RedirectView
+from django.views.generic import ListView, FormView
 from pyperclip import copy
 
 from petstagram.common.forms import CommentForm, SearchForm
@@ -12,13 +16,18 @@ class HomePageView(ListView):
     model = Photo
     context_object_name = 'all_photos'
     template_name = 'common/home-page.html'
-    paginate_by = 1
+    paginate_by = 5
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
         context['comment_form'] = CommentForm
         context['search_form'] = SearchForm(self.request.GET)
+
+        # user = self.request.user
+        #
+        # for photo in context['all_photos']:
+        #     photo.has_liked = photo.like_set.filter(user=user).exists() if user.is_authenticated else False
 
         return context
 
@@ -29,7 +38,7 @@ class HomePageView(ListView):
         if pet_name:
             queryset = queryset.filter(
                 tagged_pets__name__icontains=pet_name
-            )
+            ).distinct().order_by('-date_of_publication')
 
         return queryset
 
@@ -57,15 +66,15 @@ class HomePageView(ListView):
 #
 #     return render(request, 'common/home-page.html', context)
 
-class LikeFunctionality(View):
+class LikeFunctionality(LoginRequiredMixin, View):
     def get(self, request, photo_id, *args, **kwargs):
         photo = Photo.objects.get(id=photo_id)
-        liked_object = Like.objects.filter(to_photo_id=photo_id).first()
+        liked_object = Like.objects.filter(to_photo_id=photo_id, user=request.user).first()
 
         if liked_object:
             liked_object.delete()
         else:
-            like = Like(to_photo=photo)
+            like = Like(to_photo=photo, user=request.user)
             like.save()
 
         return redirect(request.META['HTTP_REFERER'] + f"#{photo_id}")
@@ -96,7 +105,7 @@ class CopyLinkToClipboardView(View):
 #     return redirect(request.META.get('HTTP_REFERER') + f'#{photo_id}')
 
 
-class AddCommentView(FormView):
+class AddCommentView(LoginRequiredMixin, FormView):
     form_class = CommentForm
 
     def post(self, request, *args, **kwargs):
@@ -105,6 +114,11 @@ class AddCommentView(FormView):
         if form.is_valid():
             comment = form.save(commit=False)
             comment.to_photo = Photo.objects.get(pk=kwargs['photo_id'])
+            comment.user = request.user
+
+            # my_timezone = pytz.timezone('Europe/Sofia')
+            # comment.date_time_of_publication = timezone.now().astimezone(my_timezone)
+
             comment.save()
 
             return self.form_valid(form)

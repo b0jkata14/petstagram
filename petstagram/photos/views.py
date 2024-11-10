@@ -1,3 +1,4 @@
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.shortcuts import render, redirect
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, DetailView, UpdateView, DeleteView
@@ -7,13 +8,17 @@ from petstagram.photos.forms import PhotoCreateForm, PhotoEditForm, PhotoDeleteF
 from petstagram.photos.models import Photo
 
 
-class AddPhotoView(CreateView):
+class AddPhotoView(LoginRequiredMixin, CreateView):
     model = Photo
     form_class = PhotoCreateForm
-
-    template_name = 'photos/photo-add-page.html'
     success_url = reverse_lazy('home-page')
+    template_name = 'photos/photo-add-page.html'
 
+    def form_valid(self, form):
+        photo = form.save(commit=False)
+        photo.user = self.request.user
+
+        return super().form_valid(form)
 
 # def add_photo(request):
 #     form = PhotoCreateForm(request.POST or None, request.FILES or None)
@@ -28,7 +33,7 @@ class AddPhotoView(CreateView):
 #     return render(request, 'photos/photo-add-page.html', context)
 
 
-class ShowPhotoDetailsView(DetailView):
+class ShowPhotoDetailsView(LoginRequiredMixin, DetailView):
     model = Photo
     template_name = 'photos/photo-details-page.html'
 
@@ -40,6 +45,8 @@ class ShowPhotoDetailsView(DetailView):
             'comments': self.object.comment_set.all(),
             'comment_form': CommentForm(),
         })
+
+        self.object.has_liked = self.object.like_set.filter(user=self.request.user).exists()
 
         return context
 
@@ -61,11 +68,15 @@ class ShowPhotoDetailsView(DetailView):
 #     return render(request, 'photos/photo-details-page.html', context=context)
 
 
-class EditPhotoView(UpdateView):
+class EditPhotoView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     model = Photo
     form_class = PhotoEditForm
 
     template_name = 'photos/photo-edit-page.html'
+
+    def test_func(self):
+        owner = self.get_object().user
+        return self.request.user == owner
 
     def get_success_url(self):
         return reverse_lazy(
@@ -93,12 +104,16 @@ class EditPhotoView(UpdateView):
 #     return render(request, 'photos/photo-edit-page.html', context)
 
 
-class DeletePhotoView(DeleteView):
+class DeletePhotoView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     model = Photo
     form_class = PhotoDeleteForm
 
     success_url = reverse_lazy('home-page')
     template_name = 'photos/photo-delete-page-extra.html'
+
+    def test_func(self):
+        owner = self.get_object().user
+        return self.request.user == owner
 
     def get_initial(self):
         return self.object.__dict__

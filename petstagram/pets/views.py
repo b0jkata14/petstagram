@@ -1,3 +1,4 @@
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.shortcuts import render, redirect
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, DetailView, UpdateView, DeleteView
@@ -7,12 +8,25 @@ from petstagram.pets.models import Pet
 from petstagram.pets.forms import PetForm, PetDeleteForm
 
 
-class AddPetView(CreateView):
+class AddPetView(LoginRequiredMixin, CreateView):
     model = Pet
     form_class = PetForm
     template_name = 'pets/pet-add-page.html'
     success_url = reverse_lazy('profile-details', kwargs={'pk': 1})
 
+    def form_valid(self, form):
+        pet = form.save(commit=False)
+        pet.user = self.request.user
+
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy(
+            'profile-details',
+            kwargs={
+                'pk': self.request.user.pk,
+            }
+        )
 
 # def add_pet(request):
 #     form = PetForm(request.POST or None)
@@ -28,7 +42,8 @@ class AddPetView(CreateView):
 #
 #     return render(request, 'pets/pet-add-page.html', context)
 
-class PetDetailsView(DetailView):
+
+class PetDetailsView(LoginRequiredMixin, DetailView):
     model = Pet
     template_name = 'pets/pet-details-page.html'
     context_object_name = 'pet'
@@ -55,12 +70,16 @@ class PetDetailsView(DetailView):
 #
 #     return render(request, 'pets/pet-details-page.html', context=context)
 
-class EditPetView(UpdateView):
+class EditPetView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     model = Pet
     form_class = PetForm
     slug_url_kwarg = 'pet_slug'
 
     template_name = 'pets/pet-edit-page.html'
+
+    def test_func(self):
+        owner = self.get_object().user
+        return self.request.user == owner
 
     def get_success_url(self):
         return reverse_lazy(
@@ -88,7 +107,8 @@ class EditPetView(UpdateView):
 #
 #     return render(request, 'pets/pet-edit-page.html', context)
 
-class DeletePetView(DeleteView):
+
+class DeletePetView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     model = Pet
     form_class = PetDeleteForm
     slug_url_kwarg = 'pet_slug'
@@ -96,6 +116,10 @@ class DeletePetView(DeleteView):
 
     template_name = 'pets/pet-delete-page.html'
     success_url = reverse_lazy('profile-details', kwargs={'pk': 1})
+
+    def test_func(self):
+        owner = self.get_object().user
+        return self.request.user == owner
 
     def get_initial(self):
         return self.object.__dict__

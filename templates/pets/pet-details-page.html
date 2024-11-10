@@ -14,18 +14,22 @@
                     </div>
                 </div>
                 <div class="personal">
+
                     <div class="edit">
-                         <!-- Pet Name -->
+                        <!-- Pet Name -->
                         <p>{{ pet.name }}</p>
-                        <!-- Pet Edit Button -->
-                        <a href="{% url 'pet-edit' "username" pet.slug %}">
-                            <img class="edit-img" src="/staticfiles/images/edit-pen-icon-6.jpg" alt="edit button">
-                        </a>
-                        <!-- Pet Delete Button -->
-                        <a href="{% url 'pet-delete' "username" pet.slug %}">
-                            <img class="bin-img" src="/staticfiles/images/icon-remove-22.jpg" alt="bin button">
-                        </a>
+                        {% if request.user.pk == pet.user.pk %}
+                            <!-- Pet Edit Button -->
+                            <a href="{% url 'pet-edit' "username" pet.slug %}">
+                                <img class="edit-img" src="/staticfiles/images/edit-pen-icon-6.jpg" alt="edit button">
+                            </a>
+                            <!-- Pet Delete Button -->
+                            <a href="{% url 'pet-delete' "username" pet.slug %}">
+                                <img class="bin-img" src="/staticfiles/images/icon-remove-22.jpg" alt="bin button">
+                            </a>
+                        {% endif %}
                     </div>
+
                     <div class="data">
                         <!-- Pet Total Photos -->
                         <span>{{ all_photos.count }}</span>
@@ -38,11 +42,11 @@
 
         <div class="pet-posts">
 
-        {% for photo in all_photos %}
-            {% include 'common/pet-posts.html' %}
-        {% empty %}
-            <img class="no-posts" src="{% static '/images/no_posts.png' %}" alt="no posts image">
-        {% endfor %}
+            {% for photo in all_photos %}
+                {% include 'common/pet-posts.html' %}
+            {% empty %}
+                <img class="no-posts" src="{% static '/images/no_posts.png' %}" alt="no posts image">
+            {% endfor %}
 
         </div>
     </div>

@@ -1,2 +1,2 @@
-from . import app_user
-from . import profile
+from .app_user import *
+from .profile import *
